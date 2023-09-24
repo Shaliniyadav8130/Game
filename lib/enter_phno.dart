@@ -11,6 +11,7 @@ class EnterPhNo extends StatefulWidget {
 }
 
 class _EnterPhNoState extends State<EnterPhNo> {
+  String verificationId = "";
   bool adminLogin = false;
   TextEditingController phoneController = TextEditingController();
   final userLoginFormKey = GlobalKey<FormState>();
@@ -30,21 +31,50 @@ class _EnterPhNoState extends State<EnterPhNo> {
 
     void userSignup() async {
       final mobileNumber = phoneController.text.trim();
-      authService.userLogin(
-        context: context,
-        mobileNumber: '+91$mobileNumber',
-      );
-      await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: '+44 7123 123 456',
-        verificationCompleted: (PhoneAuthCredential credential) {},
-        verificationFailed: (FirebaseAuthException e) {},
-        codeSent: (String verificationId, int? resendToken) {},
-        codeAutoRetrievalTimeout: (String verificationId) {},
-      );
-      Navigator.of(context).push(MaterialPageRoute(builder: ((context) {
-        return const EnterOtp();
-      })));
+      final String phoneNumber = '+91$mobileNumber';
+
+      try {
+        await FirebaseAuth.instance.verifyPhoneNumber(
+          phoneNumber: phoneNumber,
+          verificationCompleted: (PhoneAuthCredential credential) {
+            // Auto-retrieval of SMS code completed (not needed for this case).
+          },
+          verificationFailed: (FirebaseAuthException e) {
+            // Handle verification failure, e.g., invalid phone number.
+            print('Verification failed: ${e.message}');
+          },
+          codeSent: (String verificationId, int? resendToken) {
+            // Set the verificationId and navigate to the EnterOtp screen.
+            this.verificationId = verificationId;
+            Navigator.of(context).push(MaterialPageRoute(builder: ((context) {
+              return EnterOtp(verificationId: verificationId);
+            })));
+          },
+          codeAutoRetrievalTimeout: (String verificationId) {
+            // Auto-retrieval timeout (not needed for this case).
+          },
+        );
+      } catch (e) {
+        print('Error sending OTP: $e');
+      }
     }
+    // void userSignup() async {
+    //   final mobileNumber = phoneController.text.trim();
+    //   authService.userLogin(
+    //     context: context,
+    //     mobileNumber: '+91$mobileNumber',
+    //   );
+    //   await FirebaseAuth.instance.verifyPhoneNumber(
+    //     phoneNumber: '+44 7123 123 456',
+    //     verificationCompleted: (PhoneAuthCredential credential) {},
+    //     verificationFailed: (FirebaseAuthException e) {},
+    //     codeSent: (String verificationId, int? resendToken) {},
+    //     codeAutoRetrievalTimeout: (String verificationId) {},
+    //   );
+    //   Navigator.of(context).push(MaterialPageRoute(builder: ((context) {
+    //     return const EnterOtp();
+    //   })));
+    // }
 
     return SafeArea(
       child: Scaffold(

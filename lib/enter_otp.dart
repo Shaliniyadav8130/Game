@@ -1,17 +1,20 @@
 import 'package:bingo/admin_home.dart';
 import 'package:bingo/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EnterOtp extends StatefulWidget {
+  final String verificationId;
 
-  const EnterOtp({super.key});
+  const EnterOtp({required this.verificationId, Key? key}) : super(key: key);
 
   @override
   State<EnterOtp> createState() => _EnterOtpState();
 }
 
 class _EnterOtpState extends State<EnterOtp> {
-  TextEditingController otpController = TextEditingController();
+  final List<TextEditingController> otpControllers = List.generate(6, (index) => TextEditingController());
+
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +22,38 @@ class _EnterOtpState extends State<EnterOtp> {
     final width = MediaQuery.of(context).size.width;
     final AuthService authService = AuthService();
 
-    
+    void verifyOTP(String otp) async {
+      try {
+        // Create a PhoneAuthCredential using the entered OTP and verification ID
+        PhoneAuthCredential credential = PhoneAuthProvider.credential(
+          verificationId: widget.verificationId,
+          smsCode: otp,
+        );
+
+        // Sign in the user with the credential
+        UserCredential userCredential =
+        await FirebaseAuth.instance.signInWithCredential(credential);
+
+        // Check if the user is signed in
+        if (userCredential.user != null) {
+          // OTP verification successful, navigate to the next screen
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) {
+              return const AdminHome();
+            }),
+          );
+        } else {
+          // Handle authentication failure
+          // You can show an error message to the user
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('OTP verification failed. Please try again.'),
+          ));
+        }
+      } catch (e) {
+        print('Error verifying OTP: $e');
+        // Handle other errors that may occur during OTP verification
+      }
+    }
 
     return SafeArea(
       child: Scaffold(
@@ -97,8 +131,8 @@ class _EnterOtpState extends State<EnterOtp> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: List.generate(
-                            4,
-                            (index) {
+                            6,
+                                (index) {
                               return Padding(
                                 padding: EdgeInsets.only(right: width / 72),
                                 child: Container(
@@ -106,37 +140,37 @@ class _EnterOtpState extends State<EnterOtp> {
                                   width: width / 6,
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(15),
-                                    color:
-                                        const Color.fromARGB(255, 124, 23, 23),
+                                    color: const Color.fromARGB(255, 124, 23, 23),
                                   ),
                                   child: Padding(
-                                    padding: EdgeInsets.only(
-                                        right: width / 36, bottom: height / 80),
+                                    padding: EdgeInsets.only(right: width / 36, bottom: height / 80),
                                     child: Container(
                                       decoration: BoxDecoration(
                                         border: Border.all(
                                           width: 5,
-                                          color: const Color.fromARGB(
-                                              255, 255, 209, 70),
+                                          color: const Color.fromARGB(255, 255, 209, 70),
                                         ),
                                         borderRadius: BorderRadius.circular(15),
-                                        color: const Color.fromARGB(
-                                            255, 243, 228, 174),
+                                        color: const Color.fromARGB(255, 243, 228, 174),
                                       ),
                                       child: Padding(
                                         padding: const EdgeInsets.all(8.0),
                                         child: TextFormField(
-                                          // maxLength: 1,
-                                          cursorColor: const Color.fromARGB(
-                                              255, 124, 23, 23),
+                                          controller: otpControllers[index],
+                                          cursorColor: const Color.fromARGB(255, 124, 23, 23),
                                           keyboardType: TextInputType.number,
                                           textAlign: TextAlign.center,
                                           style: const TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w900,
-                                            color: Color.fromARGB(
-                                                255, 124, 23, 23),
+                                            color: Color.fromARGB(255, 124, 23, 23),
                                           ),
+                                          onChanged: (otp) {
+                                            // Automatically move to the next input field when a digit is entered
+                                            if (otp.length == 1) {
+                                              FocusScope.of(context).nextFocus();
+                                            }
+                                          },
                                         ),
                                       ),
                                     ),
@@ -147,13 +181,16 @@ class _EnterOtpState extends State<EnterOtp> {
                           ),
                         ),
                       ),
+
                       Padding(
                         padding: EdgeInsets.only(left: width / 9),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
                             TextButton(
-                              onPressed: () {},
+                              onPressed: () {
+                                // Implement the resend OTP functionality here
+                              },
                               child: const Text(
                                 'Resend OTP',
                                 style: TextStyle(
@@ -182,10 +219,11 @@ class _EnterOtpState extends State<EnterOtp> {
                             bottom: height / 80),
                         child: GestureDetector(
                           onTap: () {
-                            Navigator.of(context)
-                                .push(MaterialPageRoute(builder: ((context) {
-                              return const AdminHome();
-                            })));
+                            // Get the OTP entered by the user
+                            String enteredOTP = otpControllers.map((controller) => controller.text).join();
+
+                            // Verify the entered OTP
+                            verifyOTP(enteredOTP);
                           },
                           child: Container(
                             height: height / 11.5,
@@ -202,11 +240,11 @@ class _EnterOtpState extends State<EnterOtp> {
                                   border: Border.all(
                                     width: 5,
                                     color:
-                                        const Color.fromARGB(255, 124, 23, 23),
+                                    const Color.fromARGB(255, 124, 23, 23),
                                   ),
                                   borderRadius: BorderRadius.circular(15),
                                   color:
-                                      const Color.fromARGB(255, 255, 209, 70),
+                                  const Color.fromARGB(255, 255, 209, 70),
                                 ),
                                 child: const Center(
                                   child: Text(
@@ -215,7 +253,7 @@ class _EnterOtpState extends State<EnterOtp> {
                                       shadows: [
                                         Shadow(
                                           color:
-                                              Color.fromARGB(255, 124, 23, 23),
+                                          Color.fromARGB(255, 124, 23, 23),
                                           offset: Offset(5, 5),
                                           blurRadius: 40,
                                         ),
